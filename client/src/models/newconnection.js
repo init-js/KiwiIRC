@@ -34,6 +34,8 @@ _kiwi.model.NewConnection = Backbone.Collection.extend({
 
 
     onNewNetwork: function(err, network) {
+        var that = this;
+
         // Show any errors if given
         if (err) {
             this.view.showError(err);
@@ -44,8 +46,25 @@ _kiwi.model.NewConnection = Backbone.Collection.extend({
                 channel: this.connect_details.channel,
                 key: this.connect_details.channel_key
             };
+            var nick = that.connect_details.nick;
 
-            this.trigger('new_network', network);
+            _M.use_keyring(nick).then(function () {
+		console.log("opened keyring " + nick);
+		return network;
+            })["catch"](function (err) {
+		console.error("failed to open keyring " + nick, err);
+		if (err.code === "NOKEYRING") {
+                    return _M.new_keyring(nick).then(function () {
+			return network;
+                    });
+		} else {
+                    throw err;
+                }
+            }).then(function (network) {
+                that.trigger('new_network', network);
+            })["catch"](function (err) {
+                that.view.showError(err);
+            });
         }
     }
 });
