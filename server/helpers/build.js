@@ -125,8 +125,19 @@ concat(source_files, function (err, src) {
         ast.figure_out_scope();
         ast.compute_char_frequency();
         ast.mangle_names();
-        src = ast.print_to_string();
+        var source_map = uglifyJS.SourceMap({
+            file: global.config.public_http + '/assets/kiwi.min.js.map',
+            root: ""
+        });
+        var stream = uglifyJS.OutputStream({
+            source_map: source_map
+        });
 
+        ast.print(stream);
+        src = stream.toString();
+        var smap = source_map.toString();
+        var datauri = 'data:application/json;charset=utf-8;base64,' + new Buffer(smap).toString('base64');
+        src += "\n//# sourceMappingURL=" + datauri;
         fs.writeFile(global.config.public_http + '/assets/kiwi.min.js', src, { encoding: FILE_ENCODING }, function (err) {
             if (!err) {
                 console.log('Built kiwi.min.js');
