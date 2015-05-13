@@ -61,6 +61,8 @@
      **/
 
     var fn_to_bind = {
+        'command:micasa':      micasaCommand,
+        'command:queryEnc':    queryEncCmd,
         'unknown_command':     unknownCommand,
         'command':             allCommands,
         'command:msg':         msgCommand,
@@ -240,6 +242,34 @@
             panels[panels.length - 1].view.show();
     }
 
+    // Opens a new encrypted connection with another user
+    // one param: <destination>
+    function queryEncCommand (ev) {
+        var destination, message, panel;
+        var that = this;
+
+        destination = ev.params[0];
+        ev.params.shift();
+
+        message = ev.params.join(' ');
+
+        _M.new_conv().then(function (convid) {
+            var nick = that.app.connections.active_connection.get('nick');
+            // strip the signature
+            var shortName = destination + ":" + convid.split(/:/)[1];
+            panel = new _kiwi.model.Query({name: destination, displayName: shortName, convid: convid});
+            that.app.connections.active_connection.panels.add(panel);
+
+            if (panel) panel.view.show();
+
+            if (message) {
+                that.app.connections.active_connection.gateway.msg(panel.get('name'), message);
+                panel.addMsg(that.app.connections.active_connection.get('nick'), styleText('privmsg', {text: message}), 'privmsg');
+            }
+        })["catch"](function (err) {
+            console.error("could not generate conversation id.", err);
+        });
+    }
 
     function queryCommand (ev) {
         var destination, message, panel;
@@ -276,6 +306,43 @@
 
         panel.addMsg(this.app.connections.active_connection.get('nick'), styleText('privmsg', {text: message}), 'privmsg');
         this.app.connections.active_connection.gateway.msg(destination, message);
+    }
+
+    //  /micasa <msgtarget> <message>
+    function micasaCommand (ev) {
+        var message, i, packets, packetPrefix,
+        destination = ev.params[0],
+        gateway = this.app.connections.active_connection.gateway,
+        MAX_PACKLEN = 5;
+
+        ev.params.shift();
+
+        //panel.addMsg(this.app.connections.active_connection.get('nick'), styleText('privmsg', {text: message}), 'privmsg');
+        console.log("Packetizing micasa message:", message);
+        function packetize(s, maxLen) {
+            if (s.length > maxLen) {
+                return [s.substr(0, maxLen)].concat(packetize(s.substr(maxLen), maxLen));
+            } else {
+                return [s];
+            }
+        }
+
+        function pad(s, amount) {
+            while (s.length < amount) {
+                s = '0' + s;
+            }
+            return s;
+        }
+
+        packets = packetize(ev.params.join(' '), MAX_PACKLEN);
+        // TODO use hash of message
+        packetPrefix = "!MICASA:MSG:" + (Math.round(Math.random() * 10000000000)) + " ";
+
+        // Go around IRC message length limitations
+        for (i = 0; i < packets.length; i++) {
+            message = packetPrefix + pad((i + 1).toString(16), 2) + pad(packets.length.toString(16), 2) + " " + packets[i];
+            this.app.connections.active_connection.gateway.msg(destination, message);
+        }
     }
 
 

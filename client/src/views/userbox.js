@@ -9,7 +9,8 @@ _kiwi.view.UserBox = Backbone.View.extend({
         'click .voice': 'voiceClick',
         'click .devoice': 'devoiceClick',
         'click .kick': 'kickClick',
-        'click .ban': 'banClick'
+        'click .ban': 'banClick',
+        'click .befriend': 'mkfriendClick'
     },
 
     initialize: function () {
@@ -22,7 +23,9 @@ _kiwi.view.UserBox = Backbone.View.extend({
             ban: _kiwi.global.i18n.translate('client_views_userbox_ban').fetch(),
             message: _kiwi.global.i18n.translate('client_views_userbox_query').fetch(),
             info: _kiwi.global.i18n.translate('client_views_userbox_whois').fetch(),
-            ignore: _kiwi.global.i18n.translate('client_views_userbox_ignore').fetch()
+            ignore: _kiwi.global.i18n.translate('client_views_userbox_ignore').fetch(),
+            secure: _kiwi.global.i18n.translate('client_views_userbox_secure').fetch(),
+            mkfriend: _kiwi.global.i18n.translate('client_views_userbox_mkfriend').fetch()
         };
         this.$el = $(_.template($('#tmpl_userbox').html().trim(), text));
     },
@@ -41,6 +44,16 @@ _kiwi.view.UserBox = Backbone.View.extend({
         } else {
             this.$el.find('.if_op').css('display', 'none');
         }
+    },
+
+    displayFriendItems: function (isFriend) {
+	if (isFriend) {
+            this.$el.find('.if_notfriend').css('display', 'none');
+            this.$el.find('.if_friend').css('display', 'block');
+	} else {
+            this.$el.find('.if_notfriend').css('display', 'block');
+            this.$el.find('.if_friend').css('display', 'none');
+	}
     },
 
     queryClick: function (event) {
@@ -63,6 +76,9 @@ _kiwi.view.UserBox = Backbone.View.extend({
         } else {
             _kiwi.app.controlbox.processInput('/unignore ' + this.user.get('nick'));
         }
+    },
+
+    mkfriendClick: function (event) {
     },
 
     opClick: function (event) {

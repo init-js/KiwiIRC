@@ -50,11 +50,13 @@ _kiwi.view.MemberList = Backbone.View.extend({
     openUserMenuForItem: function($target) {
         var member = $target.data('member'),
             userbox,
-            are_we_an_op = !!this.model.getByNick(_kiwi.app.connections.active_connection.get('nick')).get('is_op');
+            are_we_an_op = !!this.model.getByNick(_kiwi.app.connections.active_connection.get('nick')).get('is_op'),
+            are_we_friends = member.get('friend') === null;
 
         userbox = new _kiwi.view.UserBox();
         userbox.setTargets(member, this.model.channel);
         userbox.displayOpItems(are_we_an_op);
+        userbox.displayFriendItems(are_we_friends);
 
         var menu = new _kiwi.view.MenuBox(member.get('nick') || 'User');
         menu.addItem('userbox', userbox.$el);

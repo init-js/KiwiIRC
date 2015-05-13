@@ -260,6 +260,7 @@ _kiwi.view.ControlBox = Backbone.View.extend({
             command_raw = command_raw.replace(/^\/\//, '/');
 
             // Prepend the default command
+            //FIXME -- you want to send that to the actual target -- not the name of the tab
             command_raw = '/msg ' + _kiwi.app.panels().active.get('name') + ' ' + command_raw;
         }
 

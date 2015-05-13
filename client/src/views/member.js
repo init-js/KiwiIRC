@@ -5,11 +5,16 @@ _kiwi.view.Member = Backbone.View.extend({
         this.render();
     },
     render: function () {
-        var $this = this.$el,
+        var $this = this.$el, isEnc,
             prefix_css_class = (this.model.get('modes') || []).join(' ');
 
         $this.attr('class', 'mode ' + prefix_css_class);
-        $this.html('<a class="nick"><span class="prefix">' + this.model.get("prefix") + '</span>' + this.model.get("nick") + '</a>');
+        if (this.model.get('friend')) {
+            isEnc = '<span class="enc">Enc</span>';
+        } else {
+            isEnc = "";
+        }
+        $this.html('<a class="nick">' + isEnc + '<span class="prefix">' + this.model.get("prefix") + '</span>' + this.model.get("nick") + '</a>');
 
         return this;
     }

@@ -327,7 +327,8 @@
 
 
     function onJoin(event) {
-        var c, members, user;
+        var c, members, user, that = this;
+
         c = this.panels.getByName(event.channel);
         if (!c) {
             c = new _kiwi.model.Channel({name: event.channel, network: this});
@@ -342,16 +343,20 @@
             return;
         }
 
-        user = new _kiwi.model.Member({
-            nick: event.nick,
-            ident: event.ident,
-            hostname: event.hostname,
-            user_prefixes: this.get('user_prefixes')
-        });
+        console.log("network.onJoin", event);
+        _M.is_friend(event.nick).then(function (friendship) {
+            user = new _kiwi.model.Member({
+                nick: event.nick,
+                friendship: friendship,
+                ident: event.ident,
+                hostname: event.hostname,
+                user_prefixes: that.get('user_prefixes')
+            });
+            _kiwi.global.events.emit('channel:join', {channel: event.channel, user: user, network: that.gateway})
+            .then(function() {
+                members.add(user, {kiwi: event});
+            });
 
-        _kiwi.global.events.emit('channel:join', {channel: event.channel, user: user, network: this.gateway})
-        .then(function() {
-            members.add(user, {kiwi: event});
         });
     }
 
@@ -625,12 +630,15 @@
 
         channel.temp_userlist = channel.temp_userlist || [];
         _.each(event.users, function (item) {
-            var user = new _kiwi.model.Member({
-                nick: item.nick,
-                modes: item.modes,
-                user_prefixes: that.get('user_prefixes')
-            });
-            channel.temp_userlist.push(user);
+            console.debug("building user list:", item);
+            channel.temp_userlist.push(_M.is_friend(item.nick).then(function (friendship) {
+                return new _kiwi.model.Member({
+                    friendship: friendship,
+                    nick: item.nick,
+                    modes: item.modes,
+                    user_prefixes: that.get('user_prefixes')
+                });
+            }));
         });
     }
 
@@ -644,10 +652,15 @@
         if (!channel) return;
 
         // Update the members list with the new list
-        channel.get('members').reset(channel.temp_userlist || []);
-
-        // Clear the temporary userlist
-        delete channel.temp_userlist;
+        Promise.all(channel.temp_userlist).then(function (users) {
+            console.log("channel users loaded:", users);
+            channel.get('members').reset(users || []);
+        })["catch"](function (err) {
+            console.error("Could not build list of users:", err);
+        }).then(function () {
+            // Clear the temporary userlist
+            delete channel.temp_userlist;
+        });
     }
 
 

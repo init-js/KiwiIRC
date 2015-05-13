@@ -434,11 +434,13 @@ _kiwi.view.Channel = _kiwi.view.Panel.extend({
     openUserMenuForNick: function ($target, member) {
         var members = this.model.get('members'),
             are_we_an_op = !!members.getByNick(_kiwi.app.connections.active_connection.get('nick')).get('is_op'),
+            are_we_friends = member.get('friend') !== null,
             userbox, menubox;
 
         userbox = new _kiwi.view.UserBox();
         userbox.setTargets(member, this.model);
         userbox.displayOpItems(are_we_an_op);
+        userbox.displayFriendItems(are_we_friends);
 
         menubox = new _kiwi.view.MenuBox(member.get('nick') || 'User');
         menubox.addItem('userbox', userbox.$el);

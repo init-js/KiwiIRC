@@ -437,6 +437,14 @@ msgid "client_views_userbox_query"
 msgstr "Message"
 
 #: 
+msgid "client_views_userbox_mkfriend"
+msgstr "Befriend"
+
+#:
+msgid "client_views_userbox_secure"
+msgstr "Secure"
+
+#:
 msgid "client_views_userbox_whois"
 msgstr "Info"
 
