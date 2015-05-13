@@ -173,10 +173,18 @@
                 // We may have a channel key so split it off
                 var spli = channel_name_key.trim().split(' '),
                     channel_name = spli[0],
-                    channel_key = spli[1] || '';
+                    channel_key = spli[1] || '',
+                    convid = null;
 
                 // Trim any whitespace off the name
                 channel_name = channel_name.trim();
+
+                //encrypted convo
+                if (channel_name.substr(0, "!ENC!".length) === "!ENC!") {
+                    convid = channel_name.substr("!ENC!".length);
+                    // shortened convid
+                    channel_name = convid.split(/:/).slice(0, 2).join(":");
+                }
 
                 // Add channel_prefix in front of the first channel if missing
                 if (that.get('channel_prefix').indexOf(channel_name[0]) === -1) {
@@ -187,7 +195,10 @@
                 // Check if we have the panel already. If not, create it
                 channel = that.panels.getByName(channel_name);
                 if (!channel) {
-                    channel = new _kiwi.model.Channel({name: channel_name, network: that});
+                    channel = new _kiwi.model.Channel({name: channel_name,
+                                                       network: that,
+                                                       convid: convid
+                                                      });
                     that.panels.add(channel);
                 }
 

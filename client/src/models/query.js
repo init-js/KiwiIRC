@@ -1,7 +1,7 @@
 _kiwi.model.Query = _kiwi.model.Channel.extend({
     initialize: function (attributes) {
         var name = this.get("name") || "",
-            convid = this.get("convid") || "",
+            convid = this.get("convid") || null,
             isEncrypted = !!this.get("convid"),
             displayName = this.get("displayName") || name,
             members;
@@ -13,6 +13,7 @@ _kiwi.model.Query = _kiwi.model.Channel.extend({
                                             "isEncrypted": isEncrypted});
         this.set({
             "name": name,
+            "displayName": displayName,
             "convid": convid,
             "isEncrypted": isEncrypted,
             "scrollback": []

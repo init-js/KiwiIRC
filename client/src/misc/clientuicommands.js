@@ -61,6 +61,7 @@
      **/
 
     var fn_to_bind = {
+        'command:joinenc':      joinEncCommand,
         'command:micasa':      micasaCommand,
         'command:queryEnc':    queryEncCmd,
         'unknown_command':     unknownCommand,
@@ -240,6 +241,34 @@
         // Show the last channel if we have one
         if (panels.length)
             panels[panels.length - 1].view.show();
+    }
+
+    // /joinenc [<convid>]*
+    function joinEncCommand (ev) {
+        var panels, cname, channel_names, i;
+
+        channel_names = ev.params.join(' ').split(',');
+
+        function doJoins(channel_names) {
+            for (i = 0; i < channel_names.length; i++) {
+                cname = channel_names[i];
+                channel_names[i] = "!ENC!" + cname;
+            }
+            panels = this.app.connections.active_connection.createAndJoinChannels(channel_names);
+
+            // Show the last channel if we have one
+            if (panels.length) {
+                panels[panels.length - 1].view.show();
+            }
+        }
+
+        if (channel_names.length === 0) {
+            _M.new_conv().then(function (convid) {
+                doJoins([convid]);
+            })["catch"](function (err) {
+                console.log("Could not create new conversation: ", err);
+            });
+        }
     }
 
     // Opens a new encrypted connection with another user

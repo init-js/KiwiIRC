@@ -3,16 +3,26 @@
 _kiwi.model.Channel = _kiwi.model.Panel.extend({
     initialize: function (attributes) {
         var name = this.get("name") || "",
+            convid = this.get("convid") || "",
+            isEncrypted = !!this.get("convid"),
+            displayName = this.get("displayName") || name,
             members;
 
         this.set({
             "members": new _kiwi.model.MemberList(),
             "name": name,
+            "displayName": displayName,
+            "isEncrypted": isEncrypted,
+            "convid": convid,
             "scrollback": [],
             "topic": ""
         }, {"silent": true});
 
-        this.view = new _kiwi.view.Channel({"model": this, "name": name});
+        this.view = new _kiwi.view.Channel({"model": this,
+                                            "name": name,
+                                            "convid": convid,
+                                            "displayName": displayName,
+                                            "isEncrypted": isEncrypted});
 
         members = this.get("members");
         members.channel = this;
