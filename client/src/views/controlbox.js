@@ -1,7 +1,9 @@
 _kiwi.view.ControlBox = Backbone.View.extend({
     events: {
         'keydown .inp': 'process',
-        'click .nick': 'showNickChange'
+        'click .nick': 'showNickChange',
+        'click .security': 'securityToggle',
+        'click .bsub': 'onSubmitButtonClick'
     },
 
     initialize: function () {
@@ -12,6 +14,8 @@ _kiwi.view.ControlBox = Backbone.View.extend({
 
         this.preprocessor = new InputPreProcessor();
         this.preprocessor.recursive_depth = 5;
+
+        this.isSecure = false;
 
         // Hold tab autocomplete data
         this.tabcomplete = {active: false, data: [], prefix: ''};
@@ -28,6 +32,7 @@ _kiwi.view.ControlBox = Backbone.View.extend({
         // Update our nick view as we flick between connections
         _kiwi.app.connections.on('active', function(panel, connection) {
             $('.nick', that.$el).text(connection.get('nick'));
+            console.debug("control box connection change", panel, connection);
         });
 
         // Keep focus on the input box as we flick between panels
@@ -35,14 +40,40 @@ _kiwi.view.ControlBox = Backbone.View.extend({
             if (active_panel.isChannel() || active_panel.isServer() || active_panel.isQuery()) {
                 that.$('.inp').focus();
             }
+            console.debug("control box panel change", active_panel);
         });
     },
 
     render: function() {
         var send_message_text = translateText('client_views_controlbox_message');
         this.$('.inp').attr('placeholder', send_message_text);
+        this.$('.security').find('[data-secure]').hide();
+        this.$('.security').find('[data-secure=' + !!this.isSecure + ']').show();
 
         return this;
+    },
+
+    securityToggle: function (ev) {
+        this.setSecure(!this.isSecure);
+    },
+
+    setSecure: function (val) {
+        this.isSecure = val;
+        this.render();
+    },
+
+    onSubmitButtonClick: function (ev) {
+        ev.preventDefault();
+        this.submitLine();
+        return false;
+    },
+
+    setEncryptionKey: function (newKey) {
+        var oldKey = this.convid;
+        this.convid = newKey;
+        if (oldKey !== newKey) {
+            console.debub("controlbox swap conversation id old:" + oldKey + " new:" + newKey);
+        }
     },
 
     showNickChange: function (ev) {
@@ -56,6 +87,44 @@ _kiwi.view.ControlBox = Backbone.View.extend({
         this.listenTo(this.nick_change, 'close', function() {
             delete this.nick_change;
         });
+    },
+
+    _submitSecureLine: function () {
+        var $inp = this.$el.find('.inp');
+        var inp_val = $inp.val();
+        var that = this;
+
+
+        if (inp_val) {
+            $.each(inp_val.split('\n'), function (idx, line) {
+                that.processInput("/micasa " + _kiwi.app.panels().active.get('name') + ' U' + line);
+            });
+            that.buffer.push(inp_val);
+            that.buffer_pos = that.buffer.length;
+        }
+        $inp.val('');
+        that.$('.inp').focus();
+    },
+
+    submitLine: function () {
+        var $inp = this.$el.find('.inp');
+        var inp_val = $inp.val();
+        var that = this;
+
+        if (this.isSecure) {
+            this._submitSecureLine();
+            return false;
+        }
+
+        if (inp_val) {
+            $.each(inp_val.split('\n'), function (idx, line) {
+                that.processInput(line);
+            });
+            that.buffer.push(inp_val);
+            that.buffer_pos = that.buffer.length;
+        }
+        $inp.val('');
+        that.$('.inp').focus();
     },
 
     process: function (ev) {
@@ -81,19 +150,8 @@ _kiwi.view.ControlBox = Backbone.View.extend({
         case (ev.keyCode === 13):              // return
             inp_val = inp_val.trim();
 
-            if (inp_val) {
-                $.each(inp_val.split('\n'), function (idx, line) {
-                    that.processInput(line);
-                });
-
-                this.buffer.push(inp_val);
-                this.buffer_pos = this.buffer.length;
-            }
-
-            inp.val('');
+            this.submitLine();
             return false;
-
-            break;
 
         case (ev.keyCode === 38):              // up
             if (this.buffer_pos > 0) {

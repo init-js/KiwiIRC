@@ -119,7 +119,7 @@ _kiwi.global = {
                 kiwi: 'kiwi', raw: 'raw', kick: 'kick', topic: 'topic',
                 part: 'part', join: 'join', action: 'action', ctcp: 'ctcp',
                 ctcpRequest: 'ctcpRequest', ctcpResponse: 'ctcpResponse',
-                notice: 'notice', msg: 'privmsg', say: 'privmsg',
+                notice: 'notice', msg: 'privmsg', say: 'privmsg', micasaMsg: 'fragmentMsg',
                 changeNick: 'changeNick', channelInfo: 'channelInfo',
                 mode: 'mode', quit: 'quit'
             };

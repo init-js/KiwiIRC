@@ -3,7 +3,7 @@
 _kiwi.model.Channel = _kiwi.model.Panel.extend({
     initialize: function (attributes) {
         var name = this.get("name") || "",
-            convid = this.get("convid") || "",
+            convid = this.get("convid") || null,
             isEncrypted = !!this.get("convid"),
             displayName = this.get("displayName") || name,
             members;
@@ -81,7 +81,15 @@ _kiwi.model.Channel = _kiwi.model.Panel.extend({
         }
 
         // Create a message object
-        message_obj = {"msg": msg, "date": opts.date, "time": opts.time, "nick": nick, "chan": this.get("name"), "type": type, "style": opts.style};
+        message_obj = {"msg": msg,
+                       "date": opts.date,
+                       "time": opts.time,
+                       "nick": nick,
+                       "chan": this.get("name"),
+                       "type": type,
+                       "style": opts.style,
+                       "isEncrypted": !!opts.isEncrypted,
+                       "ct": opts.ct || ""};
 
         // If this user has one, get its prefix
         members = this.get('members');

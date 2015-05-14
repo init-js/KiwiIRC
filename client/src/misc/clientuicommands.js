@@ -61,9 +61,10 @@
      **/
 
     var fn_to_bind = {
-        'command:joinenc':      joinEncCommand,
+        'command:inviteenc':   inviteEncCommand,
+        'command:joinenc':     joinEncCommand,
         'command:micasa':      micasaCommand,
-        'command:queryEnc':    queryEncCmd,
+        'command:queryenc':    queryEncCommand,
         'unknown_command':     unknownCommand,
         'command':             allCommands,
         'command:msg':         msgCommand,
@@ -219,18 +220,13 @@
         this.app.panels().active.addMsg(' ', styleText('ignore_stopped', {text: translateText('client_models_application_ignore_stopped', [ev.params[0]])}));
     };
 
-
-
-
     // A fallback action. Send a raw command to the server
     function unknownCommand (ev) {
         var raw_cmd = ev.command + ' ' + ev.params.join(' ');
         this.app.connections.active_connection.gateway.raw(raw_cmd);
     }
 
-
     function allCommands (ev) {}
-
 
     function joinCommand (ev) {
         var panels, channel_names;
@@ -243,18 +239,52 @@
             panels[panels.length - 1].view.show();
     }
 
+    // /inviteenc <convid> <user>
+    function inviteEncCommand(ev) {
+        if (ev.params.length < 2) {
+            console.error("bad syntax /inviteenc <convid> <user>");
+            return;
+        }
+        var that = this;
+        var convid = ev.params[0];
+        var userid = ev.params[1].trim();
+        var cname = "!ENC!" + convid.trim();
+        _M.is_friend(userid).then(inviteFriend)["catch"](function (err) {
+            console.error("invite failed", err);
+        });
+
+        function inviteFriend(friend) {
+            return _M.invite(friend).then(function (inviteMsg) {
+                console.debug("got invite message");
+                panels = that.app.connections.active_connection.createAndJoinChannels([cname]);
+                // Show the last channel if we have one
+                if (panels.length) {
+                    panels[panels.length - 1].view.show();
+                }
+                // send the invite out
+                gateway.micasaMsg(userid, "M" + JSON.stringify(inviteMsg));
+            });
+        }
+    }
+
     // /joinenc [<convid>]*
     function joinEncCommand (ev) {
-        var panels, cname, channel_names, i;
+        var panels, cname, channel_names, i, that = this;
+        var gateway = this.app.connections.active_connection.gateway;
 
-        channel_names = ev.params.join(' ').split(',');
+        if (ev.params.length > 0) {
+            channel_names = ev.params.join(' ').split(',');
+        } else {
+            channel_names = [];
+        }
 
         function doJoins(channel_names) {
             for (i = 0; i < channel_names.length; i++) {
                 cname = channel_names[i];
+                cname = cname.trim();
                 channel_names[i] = "!ENC!" + cname;
             }
-            panels = this.app.connections.active_connection.createAndJoinChannels(channel_names);
+            panels = that.app.connections.active_connection.createAndJoinChannels(channel_names);
 
             // Show the last channel if we have one
             if (panels.length) {
@@ -268,6 +298,8 @@
             })["catch"](function (err) {
                 console.log("Could not create new conversation: ", err);
             });
+        } else {
+            doJoins(channel_names);
         }
     }
 
@@ -276,28 +308,31 @@
     function queryEncCommand (ev) {
         var destination, message, panel;
         var that = this;
+        var gateway = this.app.connections.active_connection.gateway;
 
         destination = ev.params[0];
         ev.params.shift();
 
         message = ev.params.join(' ');
 
-        _M.new_conv().then(function (convid) {
-            var nick = that.app.connections.active_connection.get('nick');
-            // strip the signature
-            var shortName = destination + ":" + convid.split(/:/)[1];
-            panel = new _kiwi.model.Query({name: destination, displayName: shortName, convid: convid});
-            that.app.connections.active_connection.panels.add(panel);
-
-            if (panel) panel.view.show();
-
-            if (message) {
-                that.app.connections.active_connection.gateway.msg(panel.get('name'), message);
-                panel.addMsg(that.app.connections.active_connection.get('nick'), styleText('privmsg', {text: message}), 'privmsg');
-            }
-        })["catch"](function (err) {
-            console.error("could not generate conversation id.", err);
+        _M.get_friend(destination).then(startConv)["catch"](function (err) {
+            console.error("queryenc failed:", err, err.stack);
         });
+
+        function startConv(friend) {
+            return _M.new_conv().then(function (convid) {
+                return _M.invite(friend, convid).then(function (inviteMsg) {
+                    console.debug("got invite message");
+                    panels = that.app.connections.active_connection.createAndJoinChannels(["!ENC!" + convid]);
+                    // Show the last channel if we have one
+                    if (panels.length) {
+                        panels[panels.length - 1].view.show();
+                    }
+                    // send the invite out
+                    gateway.micasaMsg(destination, "M" + JSON.stringify(inviteMsg));
+                });
+            });
+        }
     }
 
     function queryCommand (ev) {
@@ -338,40 +373,16 @@
     }
 
     //  /micasa <msgtarget> <message>
-    function micasaCommand (ev) {
-        var message, i, packets, packetPrefix,
-        destination = ev.params[0],
-        gateway = this.app.connections.active_connection.gateway,
-        MAX_PACKLEN = 5;
+    function micasaCommand(ev) {
+        var message,
+            destination = ev.params[0],
+            panel = this.app.connections.active_connection.panels.getByName(destination) || this.app.panels().server;
 
         ev.params.shift();
+        message = ev.params.join(' ');
 
-        //panel.addMsg(this.app.connections.active_connection.get('nick'), styleText('privmsg', {text: message}), 'privmsg');
-        console.log("Packetizing micasa message:", message);
-        function packetize(s, maxLen) {
-            if (s.length > maxLen) {
-                return [s.substr(0, maxLen)].concat(packetize(s.substr(maxLen), maxLen));
-            } else {
-                return [s];
-            }
-        }
-
-        function pad(s, amount) {
-            while (s.length < amount) {
-                s = '0' + s;
-            }
-            return s;
-        }
-
-        packets = packetize(ev.params.join(' '), MAX_PACKLEN);
-        // TODO use hash of message
-        packetPrefix = "!MICASA:MSG:" + (Math.round(Math.random() * 10000000000)) + " ";
-
-        // Go around IRC message length limitations
-        for (i = 0; i < packets.length; i++) {
-            message = packetPrefix + pad((i + 1).toString(16), 2) + pad(packets.length.toString(16), 2) + " " + packets[i];
-            this.app.connections.active_connection.gateway.msg(destination, message);
-        }
+        panel.addMsg(this.app.connections.active_connection.get('nick'), styleText('privmsg', {text: "ENCRYPTED"}), 'privmsg', {ct: message, isEncrypted: true});
+        this.app.connections.active_connection.gateway.micasaMsg(destination, message);
     }
 
 

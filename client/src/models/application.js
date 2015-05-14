@@ -36,8 +36,20 @@
             if (this.server_settings && this.server_settings.client && this.server_settings.client.settings) {
                 this.applyDefaultClientSettings(this.server_settings.client.settings);
             }
+
+            _M.on('message', this._onExtMessage.bind(this));
         },
 
+        _onExtMessage: function (msg) {
+            console.log("Received message from extension: ", msg);
+            var connection = _kiwi.app.connections.active_connection;
+            if (!connection) {
+                console.error("Micasa message dropped. no connection.", msg);
+                return;
+            }
+            var dest = msg.hdr.to;
+            connection.gateway.micasaMsg(dest, "M" + JSON.stringify(msg));
+        },
 
         initializeInterfaces: function () {
             // Best guess at where the kiwi server is if not already specified

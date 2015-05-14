@@ -80,8 +80,84 @@
             var server_panel = new _kiwi.model.Server({name: 'Server', network: this});
             this.panels.add(server_panel);
             this.panels.server = this.panels.active = server_panel;
+
+            this.fragments = {};
         },
 
+        // Returns
+        // { isEncrypted: boolean
+        //   text: string
+        // }
+        // or null if more fragments are needed.
+        deFragment: function (from, fragment) {
+            var i, fragList, fragId, fragInfo, fragPayload, completeMsg;
+            var that = this;
+
+            if (fragment.substr(0, "!MICASA:MSG:".length) !== "!MICASA:MSG:") {
+                return {isEncrypted: false, text: fragment};
+            }
+
+            console.debug("received fragment: " + fragment);
+            fragInfo = fragment.split(' ').slice(0, 2);
+            fragPayload = fragment.substr(fragInfo.join(' ').length + 1);
+            fragId = from + ' ' + fragInfo[0];
+            fragNum = fragInfo[1].substr(0, 2);
+            fragNum = parseInt(fragNum, 16);
+            fragTotal = fragInfo[1].substr(3, 2);
+            fragTotal = parseInt(fragTotal, 16);
+
+            if (isNaN(fragNum) || isNaN(fragTotal) || fragNum > fragTotal) {
+                console.error("BAD Fragment:", fragment);
+                return null;
+            }
+
+            if (!this.fragments[fragId]) {
+                this.fragments[fragId] = [];
+                for (i = 0; i < fragTotal; i++) {
+                    this.fragments[fragId].push(null);
+                }
+            }
+            fragList = this.fragments[fragId];
+            fragList[fragNum - 1] = fragPayload;
+
+            for (i = 0; i < fragList.length; i++) {
+                if (fragList[i] === null) {
+                    console.debug("fragment missing: ", fragList);
+                    return null;
+                }
+            }
+
+            // reconstruct
+            delete this.fragments[fragId];
+            completeMsg = fragList.join('');
+            console.debug("reassembled message: " + completeMsg);
+            if (completeMsg[0] === "U") {
+                // user message
+                return {isEncrypted: true, text: completeMsg.substr(1)};
+            } else { // "M"
+                // micasa message
+                var msgObj = JSON.parse(completeMsg.substr(1));
+                if (msgObj.type && msgObj.type === "INVITE") {
+                    console.log("Received invite", msgObj);
+                    _M.accept_invite(msgObj).then(function (convid) {
+                        console.log("invitation accepted -> convid", convid);
+                        var panels = that.createAndJoinChannels(["!ENC!" + convid]);
+                        if (panels.length) {
+                            panels[panels.length - 1].view.show();
+                        }
+                    })["catch"](function (err) {
+                        console.error("accept_invite failed", err);
+                    });
+                } else {
+                    _M.message(msgObj).then(function () {
+                        console.log("delivered micasa message");
+                    })["catch"](function (err) {
+                        console.error("could not send micasa message", err);
+                    });
+                }
+                return null;
+            }
+        },
 
         reconnect: function(callback_fn) {
             var that = this,
@@ -467,8 +543,6 @@
         });
     }
 
-
-
     function onMessage(event) {
         _kiwi.global.events.emit('message:new', {network: this.gateway, message: event})
         .then(_.bind(function() {
@@ -522,7 +596,14 @@
 
             switch (event.type){
             case 'message':
-                panel.addMsg(event.nick, styleText('privmsg', {text: event.msg}), 'privmsg', {time: event.time});
+                var full = this.deFragment(event.nick, event.msg);
+                if (full === null) {
+                    return;
+                }
+                panel.addMsg(event.nick,
+                             styleText('privmsg', {text: (full.isEncrypted) ? "ENCRYPTED" : displayText}),
+                             'privmsg',
+                             {time: event.time, ct: full.text, isEncrypted: full.isEncrypted});
                 break;
 
             case 'action':

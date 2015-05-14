@@ -284,6 +284,43 @@ _kiwi.model.Gateway = Backbone.Model.extend({
         this.rpcCall('irc.privmsg', connection_id, args, callback);
     },
 
+    fragmentMsg: function (connection_id, target, fullMessage, callback) {
+	var message, i, packets, packetPrefix, gateway = this;
+
+        MAX_PACKLEN = 200;
+
+        console.log("fragmenting micasa message:", fullMessage);
+        function packetize(s, maxLen) {
+            if (s.length > maxLen) {
+                return [s.substr(0, maxLen)].concat(packetize(s.substr(maxLen), maxLen));
+            } else {
+                return [s];
+            }
+        }
+
+        function pad(s, amount) {
+            while (s.length < amount) {
+                s = '0' + s;
+            }
+            return s;
+        }
+
+        packets = packetize(fullMessage, MAX_PACKLEN);
+        // TODO use hash of message
+        packetPrefix = "!MICASA:MSG:" + (Math.round(Math.random() * 10000000000)) + " ";
+
+	function xback () {
+            console.log("XBACK", [].slice.call(arguments));
+	}
+
+        // Go around IRC message length limitations
+        for (i = 0; i < packets.length; i++) {
+            message = packetPrefix + pad((i + 1).toString(16), 2) + pad(packets.length.toString(16), 2) + " " + packets[i];
+            console.debug("fragment:", message);
+            gateway.rpcCall('irc.privmsg', connection_id, {target: target, msg: message}, xback);
+        }
+    },
+
     /**
     *   Sends a NOTICE message
     *   @param  {String}    target      The target of the message (e.g. a channel or nick)

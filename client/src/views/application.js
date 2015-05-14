@@ -70,11 +70,6 @@ _kiwi.view.Application = Backbone.View.extend({
         this.monitorPanelFallback();
     },
 
-    _toMicasa: function (msg) {
-        console.debug("Routing message TO   extension:", msg, JSON.stringify(msg));
-        _M.message(msg);
-    },
-
     updateTheme: function (theme_name) {
         // If called by the settings callback, get the correct new_value
         if (theme_name === _kiwi.global.settings) {
