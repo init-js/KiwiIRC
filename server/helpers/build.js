@@ -121,10 +121,10 @@ concat(source_files, function (err, src) {
 
         var ast = uglifyJS.parse(src, {filename: 'kiwi.js'});
         ast.figure_out_scope();
-        ast = ast.transform(uglifyJS.Compressor({warnings: false}));
+        //ast = ast.transform(uglifyJS.Compressor({warnings: false}));
         ast.figure_out_scope();
         ast.compute_char_frequency();
-        ast.mangle_names();
+        //ast.mangle_names();
         var source_map = uglifyJS.SourceMap({
             file: global.config.public_http + '/assets/kiwi.min.js.map',
             root: ""
