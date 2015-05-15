@@ -1,3 +1,6 @@
+/*jshint strict: false */
+/*global $ kiwi _kiwi Backbone _M */
+
 _kiwi.view.ControlBox = Backbone.View.extend({
     events: {
         'keydown .inp': 'process',
@@ -41,19 +44,53 @@ _kiwi.view.ControlBox = Backbone.View.extend({
                 that.$('.inp').focus();
             }
             console.debug("control box panel change", active_panel);
+            if (active_panel.isChannel() || active_panel.isQuery()) {
+                that.render();
+            }
         });
     },
 
-    render: function() {
+    getSecureInput: function () {
+        var active_panel = _kiwi.app.panels().active;
+        var convid = (active_panel && active_panel.get('convid')) || null;
+        var that = this;
+        if (convid) {
+            var $secure = that.$('.secureinp[data-convid="' + convid + '"]');
+            if ($secure.length < 1) {
+                console.log("Creating private input area for convid:", convid);
+                $secure = $('<span class="secureinp" data-convid="' + convid + '">' +
+                              '<input placeholder="Enter message securely..."></input>' +
+                            '</span>');
+                $secure.hide();
+                that.$('.input_wrap').append($secure);
+                _M.mark_private($secure[0], convid);
+            }
+            return that.$('.secureinp[data-convid="' + convid + '"]');
+        }
+        return $();
+    },
+
+    render: function () {
         var send_message_text = translateText('client_views_controlbox_message');
         this.$('.inp').attr('placeholder', send_message_text);
         this.$('.security').find('[data-secure]').hide();
         this.$('.security').find('[data-secure=' + !!this.isSecure + ']').show();
 
+        var $secure = this.getSecureInput();
+
+        // Flip input between secure and plain
+        if (this.isSecure && $secure.length > 0) {
+            this.$('.secureinp').hide();
+            this.$('.inp').hide();
+            $secure.show();
+        } else {
+            this.$('.secureinp').hide();
+            this.$('.inp').show();
+        }
         return this;
     },
 
-    securityToggle: function (ev) {
+    securityToggle: function () {
         this.setSecure(!this.isSecure);
     },
 
@@ -91,17 +128,18 @@ _kiwi.view.ControlBox = Backbone.View.extend({
 
     _submitSecureLine: function () {
         var $inp = this.$el.find('.inp');
-        var inp_val = $inp.val();
         var that = this;
 
-
-        if (inp_val) {
-            $.each(inp_val.split('\n'), function (idx, line) {
-                that.processInput("/micasa " + _kiwi.app.panels().active.get('name') + ' U' + line);
-            });
-            that.buffer.push(inp_val);
-            that.buffer_pos = that.buffer.length;
+        var $secure = this.getSecureInput();
+        if ($secure.length < 1) {
+            console.log("no secure box");
+            return;
         }
+
+        _M.lighten($secure[0]).then(function (ciphertext) {
+            that.processInput("/micasa " + _kiwi.app.panels().active.get('name') + ' ' + ciphertext);
+        });
+
         $inp.val('');
         that.$('.inp').focus();
     },

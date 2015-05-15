@@ -601,7 +601,7 @@
                     return;
                 }
                 panel.addMsg(event.nick,
-                             styleText('privmsg', {text: (full.isEncrypted) ? "ENCRYPTED" : displayText}),
+                             styleText('privmsg', {text: (full.isEncrypted) ? "ENCRYPTED" : full.text}),
                              'privmsg',
                              {time: event.time, ct: full.text, isEncrypted: full.isEncrypted});
                 break;

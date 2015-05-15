@@ -134,9 +134,11 @@ _kiwi.view.Application = Backbone.View.extend({
             return;
         }
 
-        // If we're typing into an input box somewhere, ignore
-        if ((ev.target.tagName.toLowerCase() === 'input') || (ev.target.tagName.toLowerCase() === 'textarea') || $(ev.target).attr('contenteditable')) {
-            return;
+        if (ev.target.tagName) {
+            // If we're typing into an input box somewhere, ignore
+            if ((ev.target.tagName.toLowerCase() === 'input') || (ev.target.tagName.toLowerCase() === 'textarea') || $(ev.target).attr('contenteditable')) {
+                return;
+            }
         }
 
         $('#kiwi .controlbox .inp').focus();

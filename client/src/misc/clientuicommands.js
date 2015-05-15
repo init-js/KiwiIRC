@@ -382,7 +382,7 @@
         message = ev.params.join(' ');
 
         panel.addMsg(this.app.connections.active_connection.get('nick'), styleText('privmsg', {text: "ENCRYPTED"}), 'privmsg', {ct: message, isEncrypted: true});
-        this.app.connections.active_connection.gateway.micasaMsg(destination, message);
+        this.app.connections.active_connection.gateway.micasaMsg(destination, "U" + message);
     }
 
 

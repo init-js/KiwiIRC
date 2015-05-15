@@ -67,6 +67,7 @@ _kiwi.view.Channel = _kiwi.view.Panel.extend({
 
     newMsg: function(msg) {
 
+        console.debug("view.channel.newMsg", msg);
         // Parse the msg object into properties fit for displaying
         msg = this.generateMessageDisplayObj(msg);
 
@@ -79,7 +80,23 @@ _kiwi.view.Channel = _kiwi.view.Panel.extend({
             display_obj.nick = styleText('message_nick', {nick: msg.nick, prefix: msg.nick_prefix || ''});
 
             line_msg = '<div class="msg <%= type %> <%= css_classes %>"><div class="time"><%- time_string %></div><div class="nick" style="<%= nick_style %>"><%- nick %></div><div class="text" style="<%= style %>"><%= msg %> </div></div>';
-            this.$messages.append($(_.template(line_msg, display_obj)).data('message', msg));
+
+            var $linehtml = $(_.template(line_msg, display_obj)).data('message', msg);
+            var convid = this.model.get('convid');
+            if (msg.isEncrypted && convid !== null) {
+                var $privbox = $('<span><span class="encmsg"></span></span>');
+                $linehtml.find('.text').text('');
+                $linehtml.find('.text').append($privbox);
+                this.$messages.append($linehtml);
+                _M.mark_private($privbox[0], convid);
+                return _M.darken($privbox[0], msg.ct).then(function (bool) {
+                    console.debug("darkened successfully.");
+                })["catch"](function (err) {
+                    console.error("Could not darken", err);
+                });
+            } else {
+                this.$messages.append($linehtml);
+            }
 
             // Activity/alerts based on the type of new message
             if (msg.type.match(/^action /)) {

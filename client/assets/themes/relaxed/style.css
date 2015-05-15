@@ -313,6 +313,22 @@
     display: block;
 }
 
+#kiwi .controlbox .input .secureinp {
+    position:relative;
+    height:18px; width:800px;
+    display: block;
+}
+
+#kiwi .controlbox .input .secureinp /deep/ input {
+    outline:none; resize:none;
+    overflow:hidden;
+    height:18px; width:800px;
+    border-radius: 0;
+    line-height:1.7em;
+    border: medium none;
+    box-shadow: none;
+    background-color: rgb(188, 255, 187);
+}
 
 #kiwi .controlbox .nickchange {
     padding:10px; left: 0px;
