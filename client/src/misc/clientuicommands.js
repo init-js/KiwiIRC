@@ -239,35 +239,53 @@
             panels[panels.length - 1].view.show();
     }
 
-    // /inviteenc <convid> <user>
+    // /inviteenc <user>
     function inviteEncCommand(ev) {
-        if (ev.params.length < 2) {
-            console.error("bad syntax /inviteenc <convid> <user>");
+        var gateway = this.app.connections.active_connection.gateway;
+
+        // A nick must be specified
+        if (!ev.params[0]) {
             return;
         }
+
+        // Can only invite into channels
+        if (!this.app.panels().active.isChannel()) {
+            return;
+        }
+
+        // Can only invite in encrypted channels.
+        if (!this.app.panels().active.get('isEncrypted')) {
+            console.log("channel not encrypted.");
+            return;
+        }
+
+        var userid = ev.params[0].trim();
         var that = this;
-        var convid = ev.params[0];
-        var userid = ev.params[1].trim();
+        var convid = this.app.panels().active.get('convid');
         var cname = "!ENC!" + convid.trim();
+
         _M.is_friend(userid).then(inviteFriend)["catch"](function (err) {
             console.error("invite failed", err);
         });
 
         function inviteFriend(friend) {
-            return _M.invite(friend).then(function (inviteMsg) {
+            return _M.invite(friend, convid).then(function (inviteMsg) {
                 console.debug("got invite message");
-                panels = that.app.connections.active_connection.createAndJoinChannels([cname]);
-                // Show the last channel if we have one
-                if (panels.length) {
-                    panels[panels.length - 1].view.show();
-                }
+                // panels = that.app.connections.active_connection.createAndJoinChannels([cname]);
+                // // Show the last channel if we have one
+                // if (panels.length) {
+                //     panels[panels.length - 1].view.show();
+                // }
                 // send the invite out
                 gateway.micasaMsg(userid, "M" + JSON.stringify(inviteMsg));
             });
         }
     }
 
-    // /joinenc [<convid>]*
+    // /joinenc [<streamid>]*
+    //
+    // where <streamid> is the full beeswax stream id.
+    // If omitted, a new encrypted channel will be created.
     function joinEncCommand (ev) {
         var panels, cname, channel_names, i, that = this;
         var gateway = this.app.connections.active_connection.gateway;
@@ -293,7 +311,7 @@
         }
 
         if (channel_names.length === 0) {
-            _M.new_conv().then(function (convid) {
+            _M.new_stream().then(function (convid) {
                 doJoins([convid]);
             })["catch"](function (err) {
                 console.log("Could not create new conversation: ", err);
@@ -320,7 +338,7 @@
         });
 
         function startConv(friend) {
-            return _M.new_conv().then(function (convid) {
+            return _M.new_stream().then(function (convid) {
                 return _M.invite(friend, convid).then(function (inviteMsg) {
                     console.debug("got invite message");
                     panels = that.app.connections.active_connection.createAndJoinChannels(["!ENC!" + convid]);
