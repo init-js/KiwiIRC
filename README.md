@@ -29,7 +29,7 @@ The version supports all the KiwiIRC functions, in addition to a few new client 
 
     This will establish a new friendship with the user as a side-effect.
 
-- /inviteenc &lt;user&gt;
+- /inviteenc &lt;nick&gt;
 
     Invite the given user to the current encrypted channel.
     The user must have established a frienship channel with the given user.
