@@ -45,7 +45,7 @@ using the padlock icon next to the message bar.
 
 1. Download the Kiwi source or clone the git repository:
 
-    `$ git clone https://github.com/prawnsalad/KiwiIRC.git && cd KiwiIRC`
+    `$ git clone https://github.com/web-priv/KiwiIRC.git && cd KiwiIRC`
 
 2. Install the dependencies:
 
@@ -70,7 +70,7 @@ You can also run kiwi in the foreground to see any output by using the `-f` flag
 Open your new Kiwi instance in your browser. By default: http://localhost:7778/
 
 ### Bugs
-Report bugs using the issue tracker on github: https://github.com/prawnsalad/KiwiIRC/issues
+Report bugs using the issue tracker on github: https://github.com/web-priv/KiwiIRC/issues
 
 ### Licence
 GNU Affero
